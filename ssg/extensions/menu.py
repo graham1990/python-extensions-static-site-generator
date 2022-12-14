@@ -1,11 +1,28 @@
-from ssg.hooks import hooks
-from ssg.parsers import parsers
+from ssg import hooks, parsers
+
+files = []
+
 
 @hooks.register("collect_files")
 def collect_files(source, site_parsers):
-    '''Gather all Markdown and ReStructuredText file names from the content directory'''
-    valid = not (lambda: p isinstance(p, parsers.ResourceParser))
+    def valid(p): return not isinstance(p, parsers.ResourceParser)
     for path in source.rglob("*"):
-        for parser in list(filter(hooks.valid, site_parsers)):
-            if path.suffix in parser.valid_file_ext():
+        for parser in list(filter(valid, site_parsers)):
+            if parser.valid_file_ext(path.suffix):
                 files.append(path)
+
+
+@hooks.register("generate_menu")
+def generate_menu(html, ext):
+    template = '<li><a href="{}{}">{}</a></li>'
+    def menu_item(name, ext): return template.format(name, ext, name.title())
+    menu = "\n".join([menu_item(path.stem, ext) for path in files])
+    return "<ul>\n{}</ul>\n{}".format(menu, html)
+
+
+@hooks.register("generate_menu")
+def generate_menu(html, ext):
+    template = '<li><a href="{}{}">{}</a></li>'
+    def menu_item(name, ext): return template.format(name, ext, name.title())
+    menu = "\n".join([menu_item(path.stem, ext) for path in files])
+    return "<ul>\n{}</ul>\n{}".format(menu, html)
